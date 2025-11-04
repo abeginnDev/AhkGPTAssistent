@@ -45,11 +45,16 @@ An AutoHotkey tool for quick text correction and optimization using OpenAI GPT-4
 3. Choose style (Friendly/Technical/Conversational)
 4. Text gets replaced automatically
 
+<img width="372" height="116" alt="2025-11-04 18_11_25-_How are you – Notepad" src="https://github.com/user-attachments/assets/0c4e98e2-62d4-4d90-98bc-36c2696b65e7" />
+
 ### GUI Mode
 1. Select text
 2. Press `Ctrl+Alt+C`
 3. All three styles are generated in parallel
 4. Copy result or use individual prompt
+
+<img width="391" height="321" alt="2025-11-04 18_14_35-_Main_GUI" src="https://github.com/user-attachments/assets/370adfd3-aa7f-4dd0-b464-e55351b3c217" />
+
 
 ### Tray Icon
 Right-click the taskbar icon:
@@ -83,6 +88,7 @@ Umgangssprachlich=0.7
 2. Edit API key, prompts and temperatures
 3. Configure monitor preference and window position saving
 4. Click **"Save"**
+<img width="368" height="379" alt="2025-11-04 18_14_56-Einstellungen" src="https://github.com/user-attachments/assets/c1f0c59c-003d-46b5-b18f-f1771eb3eff2" />
 
 ## 🖥️ Multi-Monitor Support
 

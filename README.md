@@ -1,59 +1,137 @@
-# 🤖 AHK_Ki_Assistent_GPT: AI Text Assistant (AutoHotkey, async)
+# 🤖 AI Text Assistant
 
-A lightweight **AutoHotkey v1** tool that rewrites selected text via parallel, non-blocking API calls and shows instant previews in three predefined styles: **Friendly**, **Technical**, and **Short**. It also includes a fully customizable prompt field. Designed for speed, minimal clicks, and seamless clipboard handling.
+An AutoHotkey tool for quick text correction and optimization using OpenAI GPT-4.
 
----
+![AI Text Assistant Interface](screenshot.png)
+<!-- Add a screenshot named "screenshot.png" to your repository -->
 
 ## ✨ Features
 
-* **Parallel Requests:** Three asynchronous calls render independently without freezing the UI.
-* **Quick Preview GUI:** Read-only panels for Friendly, Technical, and Short outputs with one-click copy, plus a custom "**Free Style**" generator.
-* **Editor-friendly Swaps:** Dedicated hotkeys replace selected text in place and safely restore the original clipboard content.
+- **3 Preset Styles**: Friendly, Technical, Conversational
+- **Quick Replace**: Replace selected text directly (Ctrl+Alt+X)
+- **Custom Prompts**: Define your own instructions
+- **Multi-Monitor Support**: Save window position and choose preferred monitor
+- **Asynchronous Processing**: Generate all three styles in parallel
+- **Clipboard Integration**: Automatic copying of conversational text
+
+## 🚀 Installation
+
+1. **Install AutoHotkey**: [Download](https://www.autohotkey.com/download/)
+2. **Download Script**: `KI-Text-Assistent.ahk`
+3. **Run**: Double-click the `.ahk` file
+
+## 🔑 Creating OpenAI API Key
+
+1. Go to [platform.openai.com](https://platform.openai.com/api-keys)
+2. Sign in or register
+3. Click **"Create new secret key"**
+4. Copy the key (starts with `sk-...`)
+5. In the script: Right-click tray icon → **"Options"** → Paste API key
+
+> ⚠️ **Important**: The key is stored locally in `prompts.ini`. Never share publicly!
+
+## ⌨️ Hotkeys
+
+| Hotkey | Function |
+|--------|----------|
+| `Ctrl+Alt+C` | Open GUI with selected text |
+| `Ctrl+Alt+X` | Quick replace menu (replace text directly) |
+
+## 📖 Usage
+
+### Quick Replace (fastest method)
+1. Select text
+2. Press `Ctrl+Alt+X`
+3. Choose style (Friendly/Technical/Conversational)
+4. Text gets replaced automatically
+
+### GUI Mode
+1. Select text
+2. Press `Ctrl+Alt+C`
+3. All three styles are generated in parallel
+4. Copy result or use individual prompt
+
+### Tray Icon
+Right-click the taskbar icon:
+- **Open Window**: GUI with current clipboard text
+- **Options**: Adjust API key, prompts and monitor settings
+- **Quick Replace**: Direct access to style selection
+
+## ⚙️ Configuration
+
+All settings are saved in `prompts.ini`:
+
+```ini
+[Config]
+APIKey=sk-...
+PreferredMonitor=1
+RememberPosition=1
+
+[Prompts]
+Freundlich=Correct the text in a friendly way...
+Technisch=Correct the text technically...
+Umgangssprachlich=Summarize the text conversationally...
+
+[Temperatures]
+Freundlich=0.7
+Technisch=0.5
+Umgangssprachlich=0.7
+```
+
+### Adjusting Settings
+1. Right-click tray icon → **"Options"**
+2. Edit API key, prompts and temperatures
+3. Configure monitor preference and window position saving
+4. Click **"Save"**
+
+## 🖥️ Multi-Monitor Support
+
+- **Preferred Monitor**: Choose which monitor the window should appear on
+- **Remember Position**: Enable this option to restore the last window position
+- Automatic validation when monitors change (e.g., undocking laptop)
+
+## 🔧 Technical Details
+
+- **Model**: GPT-4o-mini (configurable in code)
+- **Asynchronous**: Parallel API requests for faster results
+- **Local Storage**: No cloud sync, all data stays local
+- **UTF-8 Support**: Full Unicode support
+
+## 📝 Files
+
+```
+KI-Text-Assistent.ahk    # Main script
+prompts.ini              # Configuration (created automatically)
+```
+
+## 💡 Tips
+
+- **Temperature**: Lower values (0.3-0.5) = more consistent, higher values (0.7-1.0) = more creative
+- **Customize Prompts**: Experiment with different instructions for better results
+- **Clipboard History**: After quick replace, original text remains briefly in clipboard history
+
+## 🐛 Troubleshooting
+
+**"⚠️ No response (HTTP 401)"**
+→ Invalid API key. Create new key and paste in options.
+
+**"⚠️ No response (HTTP 429)"**
+→ Rate limit reached. Wait briefly or upgrade API plan.
+
+**Window doesn't appear**
+→ Reset monitor configuration: Delete `prompts.ini` and restart script.
+
+**Text doesn't get replaced**
+→ Make sure text is selected before pressing `Ctrl+Alt+X`.
+
+## 📄 License
+
+This project is Open Source. Free to use and modify.
+
+## 🤝 Contributing
+
+Issues and Pull Requests are welcome!
 
 ---
 
-## ⌨️ Hotkeys and Tray
-
-| Hotkey | Action | Description |
-| :--- | :--- | :--- |
-| $\text{Ctrl}+\text{Alt}+\text{X}$ | Quick Style Menu | Shows a small menu for in-place replacement using the predefined styles when text is selected. |
-| $\text{Ctrl}+\text{Alt}+\text{C}$ | Open Main Window | Captures the selection, opens the main window, and auto-runs the parallel previews. |
-| Tray Menu | Window/Actions/Exit | Offers options to open the main window, quick replace actions, and exit the script. |
-
----
-
-## 🛠️ Implementation Details
-
-* **True Async:** Achieved via **COM HTTP** with `onreadystatechange` for robust status and error handling.
-* **Sync Fallback:** Utilizes **WinHttp** for instant, reliable swap operations.
-* **Response Handling:** Includes minimal JSON sanitization and reliable response parsing.
-
----
-
-## 📥 Requirements
-
-* **Windows** with **AutoHotkey v1.x** installed.
-* **MSXML2** available (standard on most Windows installations).
-* A valid API access and a chat-capable model (default: **$\text{gpt}-4\text{o}-\text{mini}$**).
-
----
-
-## 🚀 Setup
-
-1.  **Save** the script locally.
-2.  **Set an environment variable** `OPENAI_API_KEY` (recommended) or use a local encrypted secret for your API key.
-3.  **Start** the script and use the tray icon or the hotkeys on selected text to begin.
-
----
-
-## 🔒 Security Best Practices
-
-* **Do not hardcode API keys.** Keep secrets out of source control and logs.
-* Add backoff for rate limits and handle **429/5xx** HTTP status codes gracefully.
-
----
-
-## 🎯 Use Cases
-
-* **Tone Shifting:** Quickly change the tone (e.g., friendly to technical) for emails, support tickets, and documentation.
-* **Summarization:** Generate one-line summaries for commit messages, status updates, and notes.
+**Built with ❤️ and AutoHotkey**

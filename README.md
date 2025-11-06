@@ -2,8 +2,6 @@
 
 An AutoHotkey tool for quick text correction and optimization using OpenAI GPT-4.
 
-![AI Text Assistant Interface](screenshot.png)
-<!-- Add a screenshot named "screenshot.png" to your repository -->
 
 ## ✨ Features
 

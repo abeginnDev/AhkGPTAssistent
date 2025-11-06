@@ -14,7 +14,7 @@ An AutoHotkey tool for quick text correction and optimization using OpenAI GPT-4
 
 ## 🚀 Installation
 
-1. **Install AutoHotkey**: [Download](https://www.autohotkey.com/download/)
+1. **Install AutoHotkey v1.1**: [Download](https://www.autohotkey.com/download/1.1/)
 2. **Download Script**: `KI-Text-Assistent.ahk`
 3. **Run**: Double-click the `.ahk` file
 
@@ -22,9 +22,10 @@ An AutoHotkey tool for quick text correction and optimization using OpenAI GPT-4
 
 1. Go to [platform.openai.com](https://platform.openai.com/api-keys)
 2. Sign in or register
-3. Click **"Create new secret key"**
-4. Copy the key (starts with `sk-...`)
-5. In the script: Right-click tray icon → **"Options"** → Paste API key
+3. Set Billing option
+4. Click **"Create new secret key"**
+5. Copy the key (starts with `sk-...`)
+6. In the script: Right-click tray icon → **"Options"** → Paste API key
 
 > ⚠️ **Important**: The key is stored locally in `prompts.ini`. Never share publicly!
 

@@ -51,9 +51,16 @@ You can use OpenAI or any local/compatible provider.
 1. Right-click the tray icon 🤖 in your taskbar.
 2. Select **"Options" (Einstellungen)**.
 3. Enter your details:
-   - **API Endpoint**: Default is `https://api.openai.com/v1/chat/completions` (Change this for Local LLMs).
-   - **Model ID**: Default is `gpt-4o-mini` (Change to `gpt-4`, `llama-3`, etc.).
-   - **API Key**: Paste your `sk-...` key.
+### 3. Enter your details:
+
+| Provider | API Endpoint | Suggested Model ID |
+| :--- | :--- | :--- |
+| **OpenAI** | `https://api.openai.com/v1/chat/completions` | `gpt-4o`, `gpt-4o-mini` |
+| **Google Gemini** | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` | `gemini-1.5-flash`, `gemini-2.0-flash-exp` |
+| **Ollama (Local)** | `http://localhost:11434/v1/chat/completions` | `llama3`, `mistral`, `phi3` |
+| **LM Studio (Local)** | `http://localhost:1234/v1/chat/completions` | *(Selected in LM Studio)* |
+| **Groq (Fast)** | `https://api.groq.com/openai/v1/chat/completions` | `llama3-70b-8192`, `mixtral-8x7b-32768` |
+| **Mistral** | `https://api.mistral.ai/v1/chat/completions` | `mistral-large-latest` |
 
 > ⚠️ **Security**: The key is stored locally in `prompts.ini`. Never share this file!
 

@@ -1,5 +1,5 @@
 ﻿; ============================================================
-; KI Text-Assistent - ASYNC Version mit Prompt-Verwaltung
+; KI Text-Assistent - ASYNC Version mit Multi-Model Support
 ; AutoHotkey v2 Version
 ; ============================================================
 
@@ -7,23 +7,29 @@
 #SingleInstance Force
 SetWorkingDir A_ScriptDir
 
-; ========== KONFIG ==========
-global G_API_URL := "https://api.openai.com/v1/chat/completions"
-global G_MODEL   := "gpt-4o-mini"
-global G_API_KEY := ""  ; ⚡ Wird aus INI geladen
+; ========== GLOBALE VARIABLEN & DEFAULTS ==========
+; Standardwerte (Fallback, falls INI leer)
+global DEFAULT_API_URL := "https://api.openai.com/v1/chat/completions"
+global DEFAULT_MODEL   := "gpt-4o-mini"
+global DEFAULT_API_KEY := ""
 
-; ========== Globale Variablen ==========
+; Globale Konfig-Variablen (werden aus INI gefüllt)
+global G_API_URL := ""
+global G_MODEL   := ""
+global G_API_KEY := ""
+
+; Request Management
 global AsyncRequests := Map()
 global PendingCount := 0
 global GuiIsOpen := false
 global OptionsGuiOpen := false
 global PROMPTS_FILE := A_ScriptDir . "\prompts.ini"
 
-; GUI Objekte (müssen global sein, um darauf zuzugreifen)
+; GUI Objekte
 global MainGui := ""
 global OptionsGui := ""
 
-; GUI Controls (für Zugriff auf Inhalte)
+; GUI Controls (Main)
 global cInputTextField := ""
 global cOutputFreundlich := ""
 global cOutputTechnisch := ""
@@ -31,7 +37,17 @@ global cOutputUmgangssprachlich := ""
 global cFreierStil := ""
 global cOutputFrei := ""
 
-; Monitor-Einstellungen
+; GUI Controls (Options)
+global cOptApiUrl := ""
+global cOptModel := ""
+global cOptApiKey := ""
+global cOptMonitor := ""
+global cOptRememberPosition := ""
+global cOptPromptFreundlich := "", cOptTempFreundlich := ""
+global cOptPromptTechnisch := "", cOptTempTechnisch := ""
+global cOptPromptUmgangssprachlich := "", cOptTempUmgangssprachlich := ""
+
+; Monitor & Position
 global PreferredMonitor := 1
 global MonitorCount := 0
 global MonitorListString := ""
@@ -40,17 +56,16 @@ global LastPosX := 0
 global LastPosY := 0
 global LastMonitor := 1
 
-; Standard-Werte
-global DEFAULT_API_KEY := ""
+; Standard-Prompts
 global DEFAULT_PROMPT_FREUNDLICH := "Formuliere den Text freundlich, respektvoll und natürlich um. Bewahre die ursprüngliche Bedeutung. Wenn keine Änderungen nötig sind, gib den Text unverändert zurück. Gib ausschließlich den angepassten Text aus, ohne jegliche Erklärung. Korrigiere:"
 global DEFAULT_PROMPT_TECHNISCH := "Korrigieren Sie den folgenden Text sachlich, präzise und technisch korrekt (Ticket-Antwort an Kunden, Sie-Form). Programmier-Slang und Fachbegriffe möglichst beibehalten. Nur ändern, wenn nötig, sonst unverändert lassen. Geben Sie ausschließlich den Text aus, ohne Kommentare. Text:"
-global DEFAULT_PROMPT_UMGANGSSPRACHLICH := "Korrigiere den Text mit wenig satzbaukorrektur locker und umgangssprachlich. Bewahre den Sinn. Wenn der Text bereits passend ist, gib ihn unverändert zurück. Gib nur den angepassten Text aus, ohne weitere Kommentare. Korrigiere:"
+global DEFAULT_PROMPT_UMGANGSSPRACHLICH := "Korrigiere den Text mit wenig Satzbaukorrektur locker und umgangssprachlich. Bewahre den Sinn. Wenn der Text bereits passend ist, gib ihn unverändert zurück. Gib nur den angepassten Text aus, ohne weitere Kommentare. Korrigiere:"
 
 global DEFAULT_TEMP_FREUNDLICH := "0.7"
 global DEFAULT_TEMP_TECHNISCH := "0.5"
 global DEFAULT_TEMP_UMGANGSSPRACHLICH := "0.7"
 
-; Aktuelle Werte
+; Aktuelle Prompt-Werte
 global PromptFreundlich := ""
 global PromptTechnisch := ""
 global PromptUmgangssprachlich := ""
@@ -72,12 +87,17 @@ InitializePrompts() {
     global
     
     if !FileExist(PROMPTS_FILE) {
+        ; Config Section mit neuen Feldern
+        IniWrite(DEFAULT_API_URL, PROMPTS_FILE, "Config", "APIUrl")
+        IniWrite(DEFAULT_MODEL,   PROMPTS_FILE, "Config", "Model")
         IniWrite(DEFAULT_API_KEY, PROMPTS_FILE, "Config", "APIKey")
+        
         IniWrite(1, PROMPTS_FILE, "Config", "PreferredMonitor")
         IniWrite(1, PROMPTS_FILE, "Config", "RememberPosition")
         IniWrite(0, PROMPTS_FILE, "GUI", "LastPosX")
         IniWrite(0, PROMPTS_FILE, "GUI", "LastPosY")
         IniWrite(1, PROMPTS_FILE, "GUI", "LastMonitor")
+        
         IniWrite(DEFAULT_PROMPT_FREUNDLICH, PROMPTS_FILE, "Prompts", "Freundlich")
         IniWrite(DEFAULT_PROMPT_TECHNISCH, PROMPTS_FILE, "Prompts", "Technisch")
         IniWrite(DEFAULT_PROMPT_UMGANGSSPRACHLICH, PROMPTS_FILE, "Prompts", "Umgangssprachlich")
@@ -94,7 +114,11 @@ InitializePrompts() {
 LoadPrompts() {
     global
     
+    ; Lade API Konfiguration
+    G_API_URL := IniRead(PROMPTS_FILE, "Config", "APIUrl", DEFAULT_API_URL)
+    G_MODEL   := IniRead(PROMPTS_FILE, "Config", "Model",  DEFAULT_MODEL)
     G_API_KEY := IniRead(PROMPTS_FILE, "Config", "APIKey", DEFAULT_API_KEY)
+    
     PreferredMonitor := Integer(IniRead(PROMPTS_FILE, "Config", "PreferredMonitor", 1))
     RememberPosition := Integer(IniRead(PROMPTS_FILE, "Config", "RememberPosition", 1))
     LastPosX := Integer(IniRead(PROMPTS_FILE, "GUI", "LastPosX", 0))
@@ -111,10 +135,13 @@ LoadPrompts() {
 }
 
 ; ========== CONFIG IN DATEI SPEICHERN ==========
-SavePrompts(newAPIKey, newFreundlich, newTechnisch, newUmgangssprachlich, newTempFreundlich, newTempTechnisch, newTempUmgangssprachlich, newMonitor := "", newRememberPos := "") {
+SavePrompts(newApiUrl, newModel, newApiKey, newFreundlich, newTechnisch, newUmgangssprachlich, newTempFreundlich, newTempTechnisch, newTempUmgangssprachlich, newMonitor := "", newRememberPos := "") {
     global
     
-    IniWrite(newAPIKey, PROMPTS_FILE, "Config", "APIKey")
+    IniWrite(newApiUrl, PROMPTS_FILE, "Config", "APIUrl")
+    IniWrite(newModel,  PROMPTS_FILE, "Config", "Model")
+    IniWrite(newApiKey, PROMPTS_FILE, "Config", "APIKey")
+    
     IniWrite(newFreundlich, PROMPTS_FILE, "Prompts", "Freundlich")
     IniWrite(newTechnisch, PROMPTS_FILE, "Prompts", "Technisch")
     IniWrite(newUmgangssprachlich, PROMPTS_FILE, "Prompts", "Umgangssprachlich")
@@ -133,7 +160,11 @@ SavePrompts(newAPIKey, newFreundlich, newTechnisch, newUmgangssprachlich, newTem
         RememberPosition := newRememberPos
     }
     
-    G_API_KEY := newAPIKey
+    ; Globale Variablen sofort aktualisieren
+    G_API_URL := newApiUrl
+    G_MODEL   := newModel
+    G_API_KEY := newApiKey
+    
     PromptFreundlich := newFreundlich
     PromptTechnisch := newTechnisch
     PromptUmgangssprachlich := newUmgangssprachlich
@@ -155,7 +186,6 @@ SaveGuiPosition(guiObj) {
         if (x == "" || y == "")
             return
         
-        ; Ermittle auf welchem Monitor das Fenster ist
         monitorNum := GetMonitorAtPosition(x, y)
         
         IniWrite(x, PROMPTS_FILE, "GUI", "LastPosX")
@@ -168,85 +198,65 @@ SaveGuiPosition(guiObj) {
     }
 }
 
-; ========== MONITOR AN POSITION ERMITTELN ==========
+; ========== MONITOR HELPER ==========
 GetMonitorAtPosition(x, y) {
     monCount := MonitorGetCount()
-    
     Loop monCount {
         MonitorGet(A_Index, &MonLeft, &MonTop, &MonRight, &MonBottom)
         if (x >= MonLeft && x <= MonRight && y >= MonTop && y <= MonBottom)
             return A_Index
     }
-    
-    return 1  ; Fallback zu Monitor 1
+    return 1
 }
 
-; ========== POSITION VALIDIEREN ==========
 IsPositionValid(x, y, monitorNum) {
     monCount := MonitorGetCount()
-    
-    ; Monitor existiert nicht mehr
     if (monitorNum < 1 || monitorNum > monCount)
         return false
-    
     MonitorGet(monitorNum, &MonLeft, &MonTop, &MonRight, &MonBottom)
-    
-    ; Position außerhalb des Monitors (mit 100px Toleranz)
     if (x < MonLeft - 100 || x > MonRight || y < MonTop - 100 || y > MonBottom)
         return false
-    
     return true
 }
 
-; ========== GUI AUF BEVORZUGTEM MONITOR POSITIONIEREN (SMART) ==========
 PositionGuiOnMonitor(guiObj, monitorNum) {
     global RememberPosition, LastPosX, LastPosY, LastMonitor
-    
     realMonCount := MonitorGetCount()
     
-    ; Smart Hybrid: Position merken wenn aktiviert
     if (RememberPosition && LastPosX != 0 && LastPosY != 0) {
-        ; Prüfe ob gespeicherte Position noch gültig ist
         if (IsPositionValid(LastPosX, LastPosY, LastMonitor)) {
             guiObj.Show("x" . LastPosX . " y" . LastPosY)
             return
         }
     }
     
-    ; Fallback: Oben links auf bevorzugtem Monitor
     if (monitorNum < 1 || monitorNum > realMonCount)
         monitorNum := 1
     
     MonitorGet(monitorNum, &MonLeft, &MonTop, &MonRight, &MonBottom)
-    
     posX := MonLeft + 20
     posY := MonTop + 20
-    
     guiObj.Show("x" . posX . " y" . posY)
 }
 
-; ========== MONITOR-ERKENNUNG ==========
 GetMonitorInfo() {
     global MonitorCount, MonitorListString
-    
     MonitorCount := MonitorGetCount()
     MonitorListString := [] 
-    
     Loop MonitorCount {
         MonitorGet(A_Index, &MonLeft, &MonTop, &MonRight, &MonBottom)
         width := MonRight - MonLeft
         height := MonBottom - MonTop
         MonitorListString.Push("Monitor " . A_Index . " (" . width . "x" . height . ")")
     }
-    
     return MonitorCount
 }
 
 ; ========== TRAY & MENÜ ==========
 SetupTrayMenu() {
-    A_TrayMenu.Delete() ; Standardmenü löschen
+    A_TrayMenu.Delete()
     A_TrayMenu.Add("Fenster öffnen", OpenMainWindow)
-    A_TrayMenu.Add("Optionen / Einstellungen bearbeiten", OpenOptionsWindow)
+    A_TrayMenu.Add("Optionen / Einstellungen", OpenOptionsWindow)
     A_TrayMenu.Add()
     A_TrayMenu.Add("Freundlich ersetzen", ReplaceFriendly)
     A_TrayMenu.Add("Technisch ersetzen", ReplaceTechnical)
@@ -262,8 +272,6 @@ SetupQuickReplaceMenu() {
     QuickReplaceMenu.Add("⭐ Umgangssprachlich", ReplaceShort)
     QuickReplaceMenu.Add()
     QuickReplaceMenu.Add("📝 GUI öffnen", OpenMainWindow)
-    
-    ; KORREKTUR: In v2 ist .Default eine Eigenschaft, keine Funktion
     QuickReplaceMenu.Default := "📝 GUI öffnen"
 }
 
@@ -273,7 +281,6 @@ SetupQuickReplaceMenu() {
         ShowToolTip("⚠️ GUI ist bereits geöffnet!")
         return
     }
-    
     clipSaved := ClipboardAll()
     A_Clipboard := ""
     Send("^c")
@@ -282,7 +289,6 @@ SetupQuickReplaceMenu() {
         ShowToolTip("⚠️ Kein Text markiert!")
         return
     }
-    
     A_Clipboard := clipSaved
     QuickReplaceMenu.Show()
 }
@@ -293,7 +299,6 @@ SetupQuickReplaceMenu() {
             MainGui.Activate()
         return
     }
-    
     A_Clipboard := ""
     Send("^c")
     if !ClipWait(0.3) {
@@ -301,27 +306,22 @@ SetupQuickReplaceMenu() {
     } else {
         inputText := A_Clipboard
     }
-    
     CreateMainGui(inputText)
 }
 
-; ========== GUI ERSTELLEN (HAUPTFENSTER) ==========
+; ========== HAUPTFENSTER ==========
 CreateMainGui(inputText := "") {
     global
-    
     GuiIsOpen := true
     MainGui := Gui("+Resize", "KI Text-Assistent")
     MainGui.SetFont("s9", "Segoe UI")
     MainGui.BackColor := "F5F5F5"
     MainGui.MarginX := 15
     MainGui.MarginY := 15
-    
     MainGui.OnEvent("Close", MainGuiClose)
     
     MainGui.SetFont("s10 Bold")
-    MainGui.Add("Text", "cNavy", "📝 Eingabetext (editierbar)")
-    
-    ; FEHLER BEHOBEN: "Normal" -> "Norm"
+    MainGui.Add("Text", "cNavy", "📝 Eingabetext")
     MainGui.SetFont("s9 Norm")
     
     cInputTextField := MainGui.Add("Edit", "w600 r3 BackgroundWhite", inputText)
@@ -329,33 +329,29 @@ CreateMainGui(inputText := "") {
     
     MainGui.SetFont("s10 Bold")
     MainGui.Add("Text", "xm y+15 cNavy", "⚡ Schnellvorschau")
-    
-    ; FEHLER BEHOBEN: "Normal" -> "Norm"
     MainGui.SetFont("s8 Norm")
     
-    ; --- Freundlich ---
+    ; Freundlich
     MainGui.Add("GroupBox", "xm y+8 w240 h220")
     MainGui.Add("Text", "xp+8 yp+12 w224 Center", "😊 FREUNDLICH")
     cOutputFreundlich := MainGui.Add("Edit", "xp yp+22 w224 r8 ReadOnly BackgroundWhite")
     MainGui.Add("Button", "xp yp+140 w224 h28", "📋 Kopieren").OnEvent("Click", CopyFreundlich)
     
-    ; --- Technisch ---
+    ; Technisch
     MainGui.Add("GroupBox", "x+15 yp-174 w240 h220")
     MainGui.Add("Text", "xp+8 yp+12 w224 Center", "🔧 TECHNISCH")
     cOutputTechnisch := MainGui.Add("Edit", "xp yp+22 w224 r8 ReadOnly BackgroundWhite")
     MainGui.Add("Button", "xp yp+140 w224 h28", "📋 Kopieren").OnEvent("Click", CopyTechnisch)
     
-    ; --- Umgangssprachlich ---
+    ; Umgangssprachlich
     MainGui.Add("GroupBox", "x+15 yp-174 w240 h220")
     MainGui.Add("Text", "xp+8 yp+12 w224 Center", "⭐ UMGANGSSPRACHLICH")
     cOutputUmgangssprachlich := MainGui.Add("Edit", "xp yp+22 w224 r8 ReadOnly BackgroundFFFFCC")
     MainGui.Add("Button", "xp yp+140 w224 h28", "📋 Kopieren").OnEvent("Click", CopyUmgangssprachlich)
     
-    ; --- Individuell ---
+    ; Individuell
     MainGui.SetFont("s10 Bold")
     MainGui.Add("Text", "xm y+18 cNavy", "🎨 Individuell")
-    
-    ; FEHLER BEHOBEN: "Normal" -> "Norm"
     MainGui.SetFont("s8 Norm")
     
     MainGui.Add("Text", "xm y+8", "Anweisung:")
@@ -379,13 +375,11 @@ CreateMainGui(inputText := "") {
     }
 }
 
-; ========== TRAY: FENSTER ÖFFNEN ==========
 OpenMainWindow(*) {
     if (GuiIsOpen) {
         MainGui.Activate()
         return
     }
-    
     tempClip := ClipboardAll()
     A_Clipboard := ""
     Send("^c")
@@ -394,15 +388,13 @@ OpenMainWindow(*) {
     else
         inputText := A_Clipboard
     A_Clipboard := tempClip
-    
     CreateMainGui(inputText)
 }
 
-; ========== OPTIONEN FENSTER ==========
-; ========== OPTIONEN FENSTER ==========
+; ========== OPTIONEN FENSTER (NEU: API FIELDS) ==========
 OpenOptionsWindow(*) {
     global OptionsGui, OptionsGuiOpen
-    global cOptAPIKey, cOptMonitor, cOptRememberPosition
+    global cOptApiUrl, cOptModel, cOptApiKey, cOptMonitor, cOptRememberPosition
     global cOptPromptFreundlich, cOptTempFreundlich
     global cOptPromptTechnisch, cOptTempTechnisch
     global cOptPromptUmgangssprachlich, cOptTempUmgangssprachlich
@@ -413,8 +405,6 @@ OpenOptionsWindow(*) {
     }
     
     OptionsGuiOpen := true
-    
-    ; Monitor-Info aktualisieren
     GetMonitorInfo()
     
     OptionsGui := Gui(, "Einstellungen")
@@ -424,29 +414,38 @@ OpenOptionsWindow(*) {
     OptionsGui.MarginY := 15
     OptionsGui.OnEvent("Close", OptionsGuiClose)
     
+    ; --- API CONFIG SECTION ---
     OptionsGui.SetFont("s10 Bold")
-    OptionsGui.Add("Text", "cNavy", "⚙️ Einstellungen")
-    
-    ; FEHLER BEHOBEN: "Normal" -> "Norm"
+    OptionsGui.Add("Text", "cNavy", "🔌 API Konfiguration")
     OptionsGui.SetFont("s9 Norm")
     
-    OptionsGui.Add("Text", "xm y+15", "🔑 OpenAI API-Key:")
-    cOptAPIKey := OptionsGui.Add("Edit", "xm y+5 w700 r1 Password", G_API_KEY)
+    OptionsGui.Add("Text", "xm y+10 w120", "Endpunkt URL:")
+    cOptApiUrl := OptionsGui.Add("Edit", "x+5 yp-3 w570 r1", G_API_URL)
     
-    OptionsGui.Add("Text", "xm y+10", "🖥️ GUI-Anzeige auf Monitor:")
+    OptionsGui.Add("Text", "xm y+10 w120", "Model ID:")
+    cOptModel := OptionsGui.Add("Edit", "x+5 yp-3 w570 r1", G_MODEL)
+    
+    OptionsGui.Add("Text", "xm y+10 w120", "API Key:")
+    cOptApiKey := OptionsGui.Add("Edit", "x+5 yp-3 w570 r1 Password", G_API_KEY)
+    
+    ; --- GUI EINSTELLUNGEN ---
+    OptionsGui.SetFont("s10 Bold")
+    OptionsGui.Add("Text", "xm y+20 cNavy", "🖥️ Darstellung")
+    OptionsGui.SetFont("s9 Norm")
+    
+    OptionsGui.Add("Text", "xm y+10", "GUI-Anzeige auf Monitor:")
     cOptMonitor := OptionsGui.Add("DropDownList", "xm y+5 w300", MonitorListString)
-    try cOptMonitor.Choose(PreferredMonitor) ; Try catch falls Monitor ID nicht mehr gültig
+    try cOptMonitor.Choose(PreferredMonitor) 
     catch
         cOptMonitor.Choose(1)
     
-    OptionsGui.Add("Text", "xm y+10", "📍 Fensterposition:")
-    cOptRememberPosition := OptionsGui.Add("Checkbox", "xm y+5", "Letzte Position beim Öffnen wiederherstellen")
+    OptionsGui.Add("Checkbox", "xm y+10 vRememberPos", "Letzte Position beim Öffnen wiederherstellen")
+    cOptRememberPosition := OptionsGui["RememberPos"]
     cOptRememberPosition.Value := RememberPosition
     
+    ; --- PROMPT EINSTELLUNGEN ---
     OptionsGui.SetFont("s10 Bold")
-    OptionsGui.Add("Text", "xm y+15 cNavy", "📝 Prompt-Einstellungen")
-    
-    ; FEHLER BEHOBEN: "Normal" -> "Norm"
+    OptionsGui.Add("Text", "xm y+20 cNavy", "📝 Prompts & Temperaturen")
     OptionsGui.SetFont("s9 Norm")
     
     tempList := ["0.1","0.3","0.5","0.7","0.9","1.0","1.2","1.5","1.8","2.0"]
@@ -472,28 +471,18 @@ OpenOptionsWindow(*) {
     cOptTempUmgangssprachlich := OptionsGui.Add("DropDownList", "xm y+5 w100", tempList)
     cOptTempUmgangssprachlich.Text := Format("{:.1f}", TempUmgangssprachlich)
     
+    ; Footer Buttons
     OptionsGui.Add("Button", "xm y+20 w200 h35", "💾 Speichern").OnEvent("Click", SavePromptsFromGui)
     OptionsGui.Add("Button", "x+10 yp w200 h35", "🔄 Zurücksetzen").OnEvent("Click", ResetPromptsToDefault)
     OptionsGui.Add("Button", "x+10 yp w200 h35", "❌ Schließen").OnEvent("Click", OptionsGuiClose)
     
-    ; Optionen-Fenster positionieren
-    if (MainGui) {
-        try {
-            MainGui.GetPos(&mainX, &mainY, &mainW)
-            OptionsGui.Show("AutoSize Center") 
-        } catch {
-            OptionsGui.Show("AutoSize Center")
-        }
-    } else {
-        OptionsGui.Show("AutoSize Center")
-    }
+    OptionsGui.Show("AutoSize Center")
 }
 
-; ========== CONFIG AUS GUI SPEICHERN ==========
+; ========== SPEICHERN (ERWEITERT) ==========
 SavePromptsFromGui(*) {
     global OptionsGuiOpen
     
-    ; Monitor-Nummer extrahieren
     monitorSelection := cOptMonitor.Text
     if RegExMatch(monitorSelection, "Monitor (\d+)", &mon)
         selectedMonitor := Integer(mon[1])
@@ -501,7 +490,9 @@ SavePromptsFromGui(*) {
         selectedMonitor := 1
         
     SavePrompts(
-        cOptAPIKey.Value,
+        cOptApiUrl.Value,     ; NEU
+        cOptModel.Value,      ; NEU
+        cOptApiKey.Value,     ; NEU
         cOptPromptFreundlich.Value,
         cOptPromptTechnisch.Value,
         cOptPromptUmgangssprachlich.Value,
@@ -517,11 +508,13 @@ SavePromptsFromGui(*) {
     OptionsGui.Destroy()
 }
 
-; ========== CONFIG AUF STANDARD ZURÜCKSETZEN ==========
+; ========== RESET (ERWEITERT) ==========
 ResetPromptsToDefault(*) {
-    SavePrompts(DEFAULT_API_KEY, DEFAULT_PROMPT_FREUNDLICH, DEFAULT_PROMPT_TECHNISCH, DEFAULT_PROMPT_UMGANGSSPRACHLICH, DEFAULT_TEMP_FREUNDLICH, DEFAULT_TEMP_TECHNISCH, DEFAULT_TEMP_UMGANGSSPRACHLICH, 1, 1)
+    SavePrompts(DEFAULT_API_URL, DEFAULT_MODEL, DEFAULT_API_KEY, DEFAULT_PROMPT_FREUNDLICH, DEFAULT_PROMPT_TECHNISCH, DEFAULT_PROMPT_UMGANGSSPRACHLICH, DEFAULT_TEMP_FREUNDLICH, DEFAULT_TEMP_TECHNISCH, DEFAULT_TEMP_UMGANGSSPRACHLICH, 1, 1)
     
-    cOptAPIKey.Value := DEFAULT_API_KEY
+    cOptApiUrl.Value := DEFAULT_API_URL
+    cOptModel.Value  := DEFAULT_MODEL
+    cOptApiKey.Value := DEFAULT_API_KEY
     cOptPromptFreundlich.Value := DEFAULT_PROMPT_FREUNDLICH
     cOptPromptTechnisch.Value := DEFAULT_PROMPT_TECHNISCH
     cOptPromptUmgangssprachlich.Value := DEFAULT_PROMPT_UMGANGSSPRACHLICH
@@ -534,14 +527,13 @@ ResetPromptsToDefault(*) {
     ShowToolTip("✅ Einstellungen auf Standard zurückgesetzt!")
 }
 
-; ========== GUI AKTIONEN ==========
+; ========== LOGIC ==========
 RegenerateAll(*) {
     inputText := cInputTextField.Value
     if (inputText == "") {
         MsgBox("Bitte Text eingeben.", "Hinweis", 48)
         return
     }
-    
     cOutputFreundlich.Value := "⏳ Lädt..."
     cOutputTechnisch.Value := "⏳ Lädt..."
     cOutputUmgangssprachlich.Value := "⏳ Lädt..."
@@ -561,7 +553,6 @@ StartAllRequestsAsync() {
 SendFreiStil(*) {
     freiStil := cFreierStil.Value
     inputText := cInputTextField.Value
-    
     if (freiStil == "" || inputText == "") {
         MsgBox("Bitte Stil und Text eingeben.", "Hinweis", 48)
         return
@@ -571,7 +562,6 @@ SendFreiStil(*) {
 }
 
 SanitizeForJson(str) {
-    ; Zuerst Backslashes escapen, damit wir nicht unsere eigenen Escapes escapen
     str := StrReplace(str, "\", "\\")
     str := StrReplace(str, '"', '\"')
     str := StrReplace(str, "`r", "\r")
@@ -580,45 +570,33 @@ SanitizeForJson(str) {
     return str
 }
 
-; ========== JSON HILFSFUNKTIONEN (Verbessert) ==========
-
 GetAssistantContent(jsonStr) {
-    ; Versuche den Inhalt robuster zu extrahieren.
-    ; Die Option "s)" aktiviert den "DotAll"-Modus, damit der Punkt (.) auch Zeilenumbrüche findet.
-    ; Wir suchen nach "choices" -> ... -> "content": "..."
-    
     if RegExMatch(jsonStr, 's)"choices".*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"', &match) {
         content := match[1]
-        
-        ; Manuelles JSON Unescaping
-        ; WICHTIG: Erst Backslashes, dann den Rest
         content := StrReplace(content, '\\', '\') 
         content := StrReplace(content, '\"', '"')
         content := StrReplace(content, '\/', '/')
         content := StrReplace(content, '\n', "`n")
         content := StrReplace(content, '\r', "`r")
         content := StrReplace(content, '\t', "`t")
-        
-        ; Unicode Characters (\uXXXX) umwandeln (falls OpenAI Emojis so sendet)
         while RegExMatch(content, "i)\\u([0-9a-f]{4})", &uMatch) {
             hexVal := "0x" . uMatch[1]
             char := Chr(Integer(hexVal))
             content := StrReplace(content, uMatch[0], char)
         }
-        
         return content
     }
-    
-    ; Falls kein Content gefunden wurde (z.B. bei API Fehler im JSON-Body trotz Status 200)
     return ""
 }
 
-; ========== ASYNCHRONE REQUEST-FUNKTION ==========
+; ========== ASYNC REQUEST (Verwendet nun G_API_URL/G_MODEL) ==========
 SendRequestAsync(styleType, tone, inputText, temperature) {
     global AsyncRequests, PendingCount
     
     prompt := tone . "`n`nText:`n" . inputText
     prompt := SanitizeForJson(prompt)
+    
+    ; Verwendung der dynamischen Variablen G_MODEL
     body := '{"model":"' . G_MODEL . '"'
           . ',"messages":[{"role":"user","content":"' . prompt . '"}]'
           . ',"temperature":' . temperature
@@ -626,38 +604,30 @@ SendRequestAsync(styleType, tone, inputText, temperature) {
     
     try {
         req := ComObject("Msxml2.XMLHTTP")
+        ; Verwendung der dynamischen URL G_API_URL
         req.Open("POST", G_API_URL, true)
         req.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
         req.SetRequestHeader("Authorization", "Bearer " . G_API_KEY)
-        
-        ; Callback binden
         req.onreadystatechange := OnRequestComplete.Bind(styleType, req)
         
-        AsyncRequests[styleType] := req ; Referenz speichern damit Objekt nicht gelöscht wird
+        AsyncRequests[styleType] := req
         PendingCount++
-        
         req.Send(body)
     } catch as e {
-        SetOutput(styleType, "⚠️ Fehler beim Request-Start: " . e.Message)
+        SetOutput(styleType, "⚠️ Fehler: " . e.Message)
     }
 }
 
-; ========== CALLBACK FÜR ASYNC-REQUESTS ==========
 OnRequestComplete(styleType, req) {
     global AsyncRequests, PendingCount
-    
     if (req.readyState != 4)
         return
-    
     PendingCount--
     
     if (req.status == 200) {
-        response := req.responseText
-        content := GetAssistantContent(response)
-        
+        content := GetAssistantContent(req.responseText)
         if (content != "") {
             SetOutput(styleType, content)
-            
             if (styleType == "Umgangssprachlich") {
                 A_Clipboard := content
                 ShowToolTip('✅ "Umgangssprachlich" automatisch kopiert!')
@@ -666,9 +636,8 @@ OnRequestComplete(styleType, req) {
             SetOutput(styleType, "⚠️ Leere Antwort")
         }
     } else {
-        SetOutput(styleType, "⚠️ Fehler (HTTP " . req.status . ")")
+        SetOutput(styleType, "⚠️ HTTP " . req.status)
     }
-    
     if AsyncRequests.Has(styleType)
         AsyncRequests.Delete(styleType)
 }
@@ -685,15 +654,13 @@ SetOutput(styleType, text) {
         cOutputFrei.Value := text
 }
 
-; ========== QUICK REPLACE (SWAP) ==========
+; ========== SWAP LOGIC (Verwendet nun G_API_URL/G_MODEL) ==========
 ReplaceFriendly(*) {
     QuickSwapWithGPT(PromptFreundlich, TempFreundlich)
 }
-
 ReplaceTechnical(*) {
     QuickSwapWithGPT(PromptTechnisch, TempTechnisch)
 }
-
 ReplaceShort(*) {
     QuickSwapWithGPT(PromptUmgangssprachlich, TempUmgangssprachlich)
 }
@@ -703,12 +670,11 @@ QuickSwapWithGPT(tone, temperature) {
     A_Clipboard := ""
     Send("^x")
     if !ClipWait(1) {
-        ShowToolTip("⚠️ Keine Auswahl gefunden.")
+        ShowToolTip("⚠️ Keine Auswahl.")
         A_Clipboard := clipSaved
         return
     }
     original := A_Clipboard
-
     prompt := tone . "`n`nText:`n" . original
     res := CallOpenAISync(prompt, temperature)
     
@@ -717,21 +683,18 @@ QuickSwapWithGPT(tone, temperature) {
         Send("^v")
         Sleep(80)
         A_Clipboard := clipSaved
-        ShowToolTip("⚠️ Keine Antwort (HTTP " . res.status . ")")
+        ShowToolTip("⚠️ Fehler HTTP " . res.status)
         return
     }
-
     A_Clipboard := res.content
     Send("^v")
     Sleep(120)
     A_Clipboard := original
     Sleep(80)
     A_Clipboard := clipSaved
-
-    ShowToolTip("✅ Ersetzt (Swap mit Historie)!")
+    ShowToolTip("✅ Ersetzt!")
 }
 
-; ========== SYNCHRONER CALL ==========
 CallOpenAISync(prompt, temperature) {
     prompt := SanitizeForJson(prompt)
     body := '{"model":"' . G_MODEL . '"'
@@ -743,15 +706,12 @@ CallOpenAISync(prompt, temperature) {
         http := ComObject("WinHttp.WinHttpRequest.5.1")
         http.Open("POST", G_API_URL, false)
         http.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
-        http.SetRequestHeader("Accept-Encoding", "identity")
         http.SetRequestHeader("Authorization", "Bearer " . G_API_KEY)
         http.Send(body)
-
-        status := http.Status
         
-        if (status != 200)
-            return {ok: false, status: status, content: ""}
-
+        if (http.Status != 200)
+            return {ok: false, status: http.Status, content: ""}
+            
         stream := ComObject("ADODB.Stream")
         stream.Type := 1
         stream.Open()
@@ -761,18 +721,17 @@ CallOpenAISync(prompt, temperature) {
         stream.Charset := "UTF-8"
         response := stream.ReadText()
         stream.Close()
-
+        
         content := GetAssistantContent(response)
         if (content == "")
-            return {ok: false, status: status, content: ""}
-
-        return {ok: true, status: status, content: content}
+            return {ok: false, status: http.Status, content: ""}
+        return {ok: true, status: http.Status, content: content}
     } catch {
         return {ok: false, status: 0, content: ""}
     }
 }
 
-; ========== COPY-BUTTONS ==========
+; ========== COPY HELPER ==========
 CopyFreundlich(*) {
     CopyTextFromControl(cOutputFreundlich, "Freundlich")
 }
@@ -789,14 +748,13 @@ CopyFrei(*) {
 CopyTextFromControl(ctrl, name) {
     val := ctrl.Value
     if (val == "" || InStr(val, "⏳") || InStr(val, "⚠️")) {
-        MsgBox("Noch kein Inhalt zum Kopieren.", "Hinweis", 48)
+        MsgBox("Kein Inhalt.", "Hinweis", 48)
         return
     }
     A_Clipboard := val
     ShowToolTip("✅ " . name . " kopiert!")
 }
 
-; ========== SCHLIEßEN ==========
 MainGuiClose(*) {
     global GuiIsOpen, MainGui
     SaveGuiPosition(MainGui)

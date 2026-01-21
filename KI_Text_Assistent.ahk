@@ -31,9 +31,10 @@ global MainGuiHwnd := 0
 
 ; Standard-Werte (werden nur beim ersten Start verwendet)
 global DEFAULT_API_KEY := ""
-global DEFAULT_PROMPT_FREUNDLICH := "Korrigiere den Text freundlich, respektvoll und natürlich. Dabei gib wirklich nur den angepassten text zurück, keine beschreibung oder ähnliches. Korrigiere:"
-global DEFAULT_PROMPT_TECHNISCH := "Korrigiere den Text sachlich, technisch und präzise. Dabei gib wirklich nur den angepassten text zurück, keine beschreibung oder ähnliches. Korrigiere:"
-global DEFAULT_PROMPT_UMGANGSSPRACHLICH := "Fasse den Text umgangssprachlich, prägnant und professionell zusammen. Dabei gib wirklich nur den angepassten text zurück, keine beschreibung oder ähnliches. Korrigiere:"
+global DEFAULT_PROMPT_FREUNDLICH := "Formuliere den Text freundlich, respektvoll und natürlich um. Bewahre die ursprüngliche Bedeutung. Wenn keine Änderungen nötig sind, gib den Text unverändert zurück. Gib ausschließlich den angepassten Text aus, ohne jegliche Erklärung. Korrigiere:"
+global DEFAULT_PROMPT_TECHNISCH := "Korrigieren Sie den folgenden Text sachlich, präzise und technisch korrekt (Ticket-Antwort an Kunden, Sie-Form). Programmier-Slang und Fachbegriffe möglichst beibehalten. Nur ändern, wenn nötig, sonst unverändert lassen. Geben Sie ausschließlich den Text aus, ohne Kommentare. Text:"
+global DEFAULT_PROMPT_UMGANGSSPRACHLICH := "Korrigiere den Text mit wenig satzbaukorrektur locker und umgangssprachlich. Bewahre den Sinn. Wenn der Text bereits passend ist, gib ihn unverändert zurück. Gib nur den angepassten Text aus, ohne weitere Kommentare. Korrigiere:"
+
 
 global DEFAULT_TEMP_FREUNDLICH := "0.7"
 global DEFAULT_TEMP_TECHNISCH := "0.5"

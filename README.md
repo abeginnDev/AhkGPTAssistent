@@ -1,142 +1,101 @@
-# 🤖 AI Text Assistant
+# 🤖 AI Text Assistant (AHK v1 & v2)
 
-An AutoHotkey tool for quick text correction and optimization using OpenAI GPT-4.
+An AutoHotkey tool for quick text correction, optimization, and generation using OpenAI GPT-4 (or compatible APIs).
 
+> **Now updated with AutoHotkey v2 support!** Choose the version that matches your installation.
 
 ## ✨ Features
 
-- **3 Preset Styles**: Friendly, Technical, Conversational
-- **Quick Replace**: Replace selected text directly (Ctrl+Alt+X)
-- **Custom Prompts**: Define your own instructions
-- **Multi-Monitor Support**: Save window position and choose preferred monitor
-- **Asynchronous Processing**: Generate all three styles in parallel
-- **Clipboard Integration**: Automatic copying of conversational text
+| Feature | v1 (Legacy) | v2 (Recommended) |
+| :--- | :---: | :---: |
+| **Engine** | AutoHotkey v1.1 | **AutoHotkey v2.0+** |
+| **Styles** | 3 Presets (Friendly, Tech, Chat) | 3 Presets + **Free Style** |
+| **API Config** | OpenAI Only | **Custom URL & Model ID** |
+| **Local LLM** | No | **Yes (Ollama/LM Studio support)** |
+| **Async Gen** | Yes | **Yes (Optimized)** |
+
+### Core Functionality
+- **Quick Replace**: Replace selected text directly in any app (`Ctrl+Alt+X`)
+- **Parallel Processing**: Generate Friendly, Technical, and Conversational styles simultaneously.
+- **Custom Prompts**: Fully customizable instructions via GUI.
+- **Multi-Monitor Support**: Smart window positioning and monitor selection.
+- **Clipboard History**: Safely restores clipboard after text replacement.
+
+## 📂 Folder Structure
+
+This repository contains two versions of the script:
+
+- **`/v1/`**: For users running legacy AutoHotkey v1.1.
+- **`/v2/`**: For users running modern AutoHotkey v2.0 (Includes generic API support).
 
 ## 🚀 Installation
 
-1. **Install AutoHotkey v1.1**: [Download](https://www.autohotkey.com/download/1.1/)
-2. **Download Script**: `KI-Text-Assistent.ahk`
-3. **Run**: Double-click the `.ahk` file
+### Option A: AutoHotkey v2 (New & Better)
+1. **Install AutoHotkey v2**: [Download v2.0](https://www.autohotkey.com/)
+2. Navigate to the `v2` folder in this repo.
+3. Run `KI-Text-Assistent.ahk` (Double-click).
 
-## 🔑 Creating OpenAI API Key
+### Option B: AutoHotkey v1 (Legacy)
+1. **Install AutoHotkey v1.1**: [Download v1.1](https://www.autohotkey.com/download/1.1/)
+2. Navigate to the `v1` folder.
+3. Run `KI-Text-Assistent.ahk`.
 
-1. Go to [platform.openai.com](https://platform.openai.com/api-keys)
-2. Sign in or register
-3. Set Billing option
-4. Click **"Create new secret key"**
-5. Copy the key (starts with `sk-...`)
-6. In the script: Right-click tray icon → **"Options"** → Paste API key
+## 🔑 Configuration & API Key
 
-> ⚠️ **Important**: The key is stored locally in `prompts.ini`. Never share publicly!
+### 1. Get an API Key
+You can use OpenAI or any local/compatible provider.
+1. **OpenAI**: Go to [platform.openai.com](https://platform.openai.com/api-keys) -> Create new secret key.
+2. **Local LLM**: Start your server (e.g., LM Studio/Ollama) and get your local URL (usually `http://localhost:1234/v1/chat/completions`).
+
+### 2. Setup in Script
+1. Right-click the tray icon 🤖 in your taskbar.
+2. Select **"Options" (Einstellungen)**.
+3. Enter your details:
+   - **API Endpoint**: Default is `https://api.openai.com/v1/chat/completions` (Change this for Local LLMs).
+   - **Model ID**: Default is `gpt-4o-mini` (Change to `gpt-4`, `llama-3`, etc.).
+   - **API Key**: Paste your `sk-...` key.
+
+> ⚠️ **Security**: The key is stored locally in `prompts.ini`. Never share this file!
 
 ## ⌨️ Hotkeys
 
 | Hotkey | Function |
 |--------|----------|
-| `Ctrl+Alt+C` | Open GUI with selected text |
-| `Ctrl+Alt+X` | Quick replace menu (replace text directly) |
+| `Ctrl+Alt+C` | **Open GUI**: Opens the main window with the selected text copied. |
+| `Ctrl+Alt+X` | **Quick Replace**: Opens a small menu to replace text instantly. |
 
 ## 📖 Usage
 
-### Quick Replace (fastest method)
-1. Select text
-2. Press `Ctrl+Alt+X`
-3. Choose style (Friendly/Technical/Conversational)
-4. Text gets replaced automatically
+### GUI Mode (`Ctrl+Alt+C`)
+Best for comparing different tones or writing custom instructions.
+1. Select text -> Press Hotkey.
+2. Wait for parallel generation.
+3. **v2 Only**: Use the "Individuell" field to type a custom instruction (e.g., "Translate to Spanish") and click "Generieren".
 
-<img width="372" height="116" alt="2025-11-04 18_11_25-_How are you – Notepad" src="https://github.com/user-attachments/assets/0c4e98e2-62d4-4d90-98bc-36c2696b65e7" />
+<img width="391" height="321" alt="Main GUI Interface" src="https://github.com/user-attachments/assets/370adfd3-aa7f-4dd0-b464-e55351b3c217" />
 
-### GUI Mode
-1. Select text
-2. Press `Ctrl+Alt+C`
-3. All three styles are generated in parallel
-4. Copy result or use individual prompt
+### Quick Replace (`Ctrl+Alt+X`)
+Best for fast corrections while typing emails or tickets.
+1. Select text -> Press Hotkey.
+2. Select style from menu.
+3. Text is replaced automatically.
 
-<img width="391" height="321" alt="2025-11-04 18_14_35-_Main_GUI" src="https://github.com/user-attachments/assets/370adfd3-aa7f-4dd0-b464-e55351b3c217" />
+<img width="372" height="116" alt="Quick Replace Menu" src="https://github.com/user-attachments/assets/0c4e98e2-62d4-4d90-98bc-36c2696b65e7" />
 
+## ⚙️ Advanced Configuration (ini)
 
-### Tray Icon
-Right-click the taskbar icon:
-- **Open Window**: GUI with current clipboard text
-- **Options**: Adjust API key, prompts and monitor settings
-- **Quick Replace**: Direct access to style selection
+Settings are saved in `prompts.ini` next to the script. 
 
-## ⚙️ Configuration
-
-All settings are saved in `prompts.ini`:
-
+**v2 Example `prompts.ini`:**
 ```ini
 [Config]
-APIKey=sk-...
+APIUrl=[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)
+Model=gpt-4o-mini
+APIKey=sk-your-key-here
 PreferredMonitor=1
 RememberPosition=1
 
 [Prompts]
 Freundlich=Correct the text in a friendly way...
 Technisch=Correct the text technically...
-Umgangssprachlich=Summarize the text conversationally...
-
-[Temperatures]
-Freundlich=0.7
-Technisch=0.5
-Umgangssprachlich=0.7
-```
-
-### Adjusting Settings
-1. Right-click tray icon → **"Options"**
-2. Edit API key, prompts and temperatures
-3. Configure monitor preference and window position saving
-4. Click **"Save"**
-<img width="368" height="379" alt="2025-11-04 18_14_56-Einstellungen" src="https://github.com/user-attachments/assets/c1f0c59c-003d-46b5-b18f-f1771eb3eff2" />
-
-## 🖥️ Multi-Monitor Support
-
-- **Preferred Monitor**: Choose which monitor the window should appear on
-- **Remember Position**: Enable this option to restore the last window position
-- Automatic validation when monitors change (e.g., undocking laptop)
-
-## 🔧 Technical Details
-
-- **Model**: GPT-4o-mini (configurable in code)
-- **Asynchronous**: Parallel API requests for faster results
-- **Local Storage**: No cloud sync, all data stays local
-- **UTF-8 Support**: Full Unicode support
-
-## 📝 Files
-
-```
-KI-Text-Assistent.ahk    # Main script
-prompts.ini              # Configuration (created automatically)
-```
-
-## 💡 Tips
-
-- **Temperature**: Lower values (0.3-0.5) = more consistent, higher values (0.7-1.0) = more creative
-- **Customize Prompts**: Experiment with different instructions for better results
-- **Clipboard History**: After quick replace, original text remains briefly in clipboard history
-
-## 🐛 Troubleshooting
-
-**"⚠️ No response (HTTP 401)"**
-→ Invalid API key. Create new key and paste in options.
-
-**"⚠️ No response (HTTP 429)"**
-→ Rate limit reached. Wait briefly or upgrade API plan.
-
-**Window doesn't appear**
-→ Reset monitor configuration: Delete `prompts.ini` and restart script.
-
-**Text doesn't get replaced**
-→ Make sure text is selected before pressing `Ctrl+Alt+X`.
-
-## 📄 License
-
-This project is Open Source. Free to use and modify.
-
-## 🤝 Contributing
-
-Issues and Pull Requests are welcome!
-
----
-
-**Built with ❤️ and AutoHotkey**
+...

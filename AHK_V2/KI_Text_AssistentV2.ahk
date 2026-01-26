@@ -57,9 +57,9 @@ global LastPosY := 0
 global LastMonitor := 1
 
 ; Standard-Prompts
-global DEFAULT_PROMPT_FREUNDLICH := "Formuliere den Text freundlich, respektvoll und natürlich um. Bewahre die ursprüngliche Bedeutung. Wenn keine Änderungen nötig sind, gib den Text unverändert zurück. Gib ausschließlich den angepassten Text aus, ohne jegliche Erklärung. Korrigiere:"
-global DEFAULT_PROMPT_TECHNISCH := "Korrigieren Sie den folgenden Text sachlich, präzise und technisch korrekt (Ticket-Antwort an Kunden, Sie-Form). Programmier-Slang und Fachbegriffe möglichst beibehalten. Nur ändern, wenn nötig, sonst unverändert lassen. Geben Sie ausschließlich den Text aus, ohne Kommentare. Text:"
-global DEFAULT_PROMPT_UMGANGSSPRACHLICH := "Korrigiere den Text mit wenig Satzbaukorrektur locker und umgangssprachlich. Bewahre den Sinn. Wenn der Text bereits passend ist, gib ihn unverändert zurück. Gib nur den angepassten Text aus, ohne weitere Kommentare. Korrigiere:"
+global DEFAULT_PROMPT_FREUNDLICH := "Task: Detect the language of the provided text. Rewrite the text to be friendly, respectful, and natural IN THE DETECTED LANGUAGE. IMPORTANT: Do NOT include the language name. Do NOT add prefixes like 'English:' or 'German:'. Output ONLY the rewritten text content."
+global DEFAULT_PROMPT_TECHNISCH := "Task: Detect the language of the provided text. Rewrite the text to be technical, precise, and professional (IT Support style) IN THE DETECTED LANGUAGE. IMPORTANT: Do NOT include the language name. Do NOT add prefixes. Output ONLY the rewritten text content."
+global DEFAULT_PROMPT_UMGANGSSPRACHLICH := "Task: Detect the language of the provided text. Rewrite the text to be casual, loose, and short (Chat style) IN THE DETECTED LANGUAGE. IMPORTANT: Do NOT include the language name. Do NOT add prefixes. Output ONLY the rewritten text content."
 
 global DEFAULT_TEMP_FREUNDLICH := "0.7"
 global DEFAULT_TEMP_TECHNISCH := "0.5"

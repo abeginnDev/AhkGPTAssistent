@@ -1,4 +1,4 @@
-﻿; ============================================================
+; ============================================================
 ; KI Text-Assistent - ASYNC Version mit Multi-Model Support
 ; AutoHotkey v2 Version
 ; ============================================================
@@ -276,7 +276,7 @@ SetupQuickReplaceMenu() {
 }
 
 ; ========== HOTKEYS ==========
-^!x:: {
+^d:: {
     if (GuiIsOpen) {
         ShowToolTip("⚠️ GUI ist bereits geöffnet!")
         return
@@ -285,9 +285,13 @@ SetupQuickReplaceMenu() {
     A_Clipboard := ""
     Send("^c")
     if !ClipWait(0.3) {
-        A_Clipboard := clipSaved
-        ShowToolTip("⚠️ Kein Text markiert!")
-        return
+        ; Fallback: Alles auswählen und kopieren
+        Send("^a^c")
+        if !ClipWait(0.5) {
+            A_Clipboard := clipSaved
+            ShowToolTip("⚠️ Kein Text markiert!")
+            return
+        }
     }
     A_Clipboard := clipSaved
     QuickReplaceMenu.Show()
@@ -665,14 +669,18 @@ ReplaceShort(*) {
     QuickSwapWithGPT(PromptUmgangssprachlich, TempUmgangssprachlich)
 }
 
-QuickSwapWithGPT(tone, temperature) {
-    clipSaved := ClipboardAll()
+    QuickSwapWithGPT(tone, temperature) {
+        clipSaved := ClipboardAll()
     A_Clipboard := ""
     Send("^x")
-    if !ClipWait(1) {
-        ShowToolTip("⚠️ Keine Auswahl.")
-        A_Clipboard := clipSaved
-        return
+    if !ClipWait(0.5) {
+        ; Fallback: Alles auswählen & ausschneiden
+        Send("^a^x")
+        if !ClipWait(0.8) {
+            ShowToolTip("⚠️ Keine Auswahl.")
+            A_Clipboard := clipSaved
+            return
+        }
     }
     original := A_Clipboard
     prompt := tone . "`n`nText:`n" . original

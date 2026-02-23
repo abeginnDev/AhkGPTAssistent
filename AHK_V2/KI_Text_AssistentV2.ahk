@@ -43,6 +43,7 @@ global cOptModel := ""
 global cOptApiKey := ""
 global cOptMonitor := ""
 global cOptRememberPosition := ""
+global cOptFallbackSelectAll := ""
 global cOptPromptFreundlich := "", cOptTempFreundlich := ""
 global cOptPromptTechnisch := "", cOptTempTechnisch := ""
 global cOptPromptUmgangssprachlich := "", cOptTempUmgangssprachlich := ""
@@ -52,6 +53,7 @@ global PreferredMonitor := 1
 global MonitorCount := 0
 global MonitorListString := ""
 global RememberPosition := 1
+global FallbackSelectAll := 1
 global LastPosX := 0
 global LastPosY := 0
 global LastMonitor := 1
@@ -94,6 +96,7 @@ InitializePrompts() {
         
         IniWrite(1, PROMPTS_FILE, "Config", "PreferredMonitor")
         IniWrite(1, PROMPTS_FILE, "Config", "RememberPosition")
+        IniWrite(1, PROMPTS_FILE, "Config", "FallbackSelectAll")
         IniWrite(0, PROMPTS_FILE, "GUI", "LastPosX")
         IniWrite(0, PROMPTS_FILE, "GUI", "LastPosY")
         IniWrite(1, PROMPTS_FILE, "GUI", "LastMonitor")
@@ -121,6 +124,7 @@ LoadPrompts() {
     
     PreferredMonitor := Integer(IniRead(PROMPTS_FILE, "Config", "PreferredMonitor", 1))
     RememberPosition := Integer(IniRead(PROMPTS_FILE, "Config", "RememberPosition", 1))
+    FallbackSelectAll := Integer(IniRead(PROMPTS_FILE, "Config", "FallbackSelectAll", 1))
     LastPosX := Integer(IniRead(PROMPTS_FILE, "GUI", "LastPosX", 0))
     LastPosY := Integer(IniRead(PROMPTS_FILE, "GUI", "LastPosY", 0))
     LastMonitor := Integer(IniRead(PROMPTS_FILE, "GUI", "LastMonitor", 1))
@@ -135,7 +139,7 @@ LoadPrompts() {
 }
 
 ; ========== CONFIG IN DATEI SPEICHERN ==========
-SavePrompts(newApiUrl, newModel, newApiKey, newFreundlich, newTechnisch, newUmgangssprachlich, newTempFreundlich, newTempTechnisch, newTempUmgangssprachlich, newMonitor := "", newRememberPos := "") {
+SavePrompts(newApiUrl, newModel, newApiKey, newFreundlich, newTechnisch, newUmgangssprachlich, newTempFreundlich, newTempTechnisch, newTempUmgangssprachlich, newMonitor := "", newRememberPos := "", newFallbackSelectAll := "") {
     global
     
     IniWrite(newApiUrl, PROMPTS_FILE, "Config", "APIUrl")
@@ -158,6 +162,11 @@ SavePrompts(newApiUrl, newModel, newApiKey, newFreundlich, newTechnisch, newUmga
     if (newRememberPos != "") {
         IniWrite(newRememberPos, PROMPTS_FILE, "Config", "RememberPosition")
         RememberPosition := newRememberPos
+    }
+
+    if (newFallbackSelectAll != "") {
+        IniWrite(newFallbackSelectAll, PROMPTS_FILE, "Config", "FallbackSelectAll")
+        FallbackSelectAll := newFallbackSelectAll
     }
     
     ; Globale Variablen sofort aktualisieren
@@ -285,9 +294,17 @@ SetupQuickReplaceMenu() {
     A_Clipboard := ""
     Send("^c")
     if !ClipWait(0.3) {
-        ; Fallback: Alles auswählen und kopieren
-        Send("^a^c")
-        if !ClipWait(0.5) {
+        if (FallbackSelectAll) {
+            ; Fallback: Alles auswählen und kopieren
+            Send("^a")
+            Sleep(50)
+            Send("^c")
+            if !ClipWait(0.5) {
+                A_Clipboard := clipSaved
+                ShowToolTip("⚠️ Kein Text markiert!")
+                return
+            }
+        } else {
             A_Clipboard := clipSaved
             ShowToolTip("⚠️ Kein Text markiert!")
             return
@@ -306,7 +323,17 @@ SetupQuickReplaceMenu() {
     A_Clipboard := ""
     Send("^c")
     if !ClipWait(0.3) {
-        inputText := ""
+        if (FallbackSelectAll) {
+            Send("^a")
+            Sleep(50)
+            Send("^c")
+            if !ClipWait(0.5)
+                inputText := ""
+            else
+                inputText := A_Clipboard
+        } else {
+            inputText := ""
+        }
     } else {
         inputText := A_Clipboard
     }
@@ -387,10 +414,21 @@ OpenMainWindow(*) {
     tempClip := ClipboardAll()
     A_Clipboard := ""
     Send("^c")
-    if !ClipWait(0.5)
-        inputText := ""
-    else
+    if !ClipWait(0.5) {
+        if (FallbackSelectAll) {
+            Send("^a")
+            Sleep(50)
+            Send("^c")
+            if !ClipWait(0.5)
+                inputText := ""
+            else
+                inputText := A_Clipboard
+        } else {
+            inputText := ""
+        }
+    } else {
         inputText := A_Clipboard
+    }
     A_Clipboard := tempClip
     CreateMainGui(inputText)
 }
@@ -398,7 +436,7 @@ OpenMainWindow(*) {
 ; ========== OPTIONEN FENSTER (NEU: API FIELDS) ==========
 OpenOptionsWindow(*) {
     global OptionsGui, OptionsGuiOpen
-    global cOptApiUrl, cOptModel, cOptApiKey, cOptMonitor, cOptRememberPosition
+    global cOptApiUrl, cOptModel, cOptApiKey, cOptMonitor, cOptRememberPosition, cOptFallbackSelectAll
     global cOptPromptFreundlich, cOptTempFreundlich
     global cOptPromptTechnisch, cOptTempTechnisch
     global cOptPromptUmgangssprachlich, cOptTempUmgangssprachlich
@@ -446,6 +484,10 @@ OpenOptionsWindow(*) {
     OptionsGui.Add("Checkbox", "xm y+10 vRememberPos", "Letzte Position beim Öffnen wiederherstellen")
     cOptRememberPosition := OptionsGui["RememberPos"]
     cOptRememberPosition.Value := RememberPosition
+
+    OptionsGui.Add("Checkbox", "xm y+10 vFallbackSelectAll", "Wenn nichts markiert ist, alles markieren (Strg+A)")
+    cOptFallbackSelectAll := OptionsGui["FallbackSelectAll"]
+    cOptFallbackSelectAll.Value := FallbackSelectAll
     
     ; --- PROMPT EINSTELLUNGEN ---
     OptionsGui.SetFont("s10 Bold")
@@ -504,7 +546,8 @@ SavePromptsFromGui(*) {
         cOptTempTechnisch.Text,
         cOptTempUmgangssprachlich.Text,
         selectedMonitor,
-        cOptRememberPosition.Value
+        cOptRememberPosition.Value,
+        cOptFallbackSelectAll.Value
     )
     
     ShowToolTip("✅ Einstellungen gespeichert!")
@@ -514,7 +557,7 @@ SavePromptsFromGui(*) {
 
 ; ========== RESET (ERWEITERT) ==========
 ResetPromptsToDefault(*) {
-    SavePrompts(DEFAULT_API_URL, DEFAULT_MODEL, DEFAULT_API_KEY, DEFAULT_PROMPT_FREUNDLICH, DEFAULT_PROMPT_TECHNISCH, DEFAULT_PROMPT_UMGANGSSPRACHLICH, DEFAULT_TEMP_FREUNDLICH, DEFAULT_TEMP_TECHNISCH, DEFAULT_TEMP_UMGANGSSPRACHLICH, 1, 1)
+    SavePrompts(DEFAULT_API_URL, DEFAULT_MODEL, DEFAULT_API_KEY, DEFAULT_PROMPT_FREUNDLICH, DEFAULT_PROMPT_TECHNISCH, DEFAULT_PROMPT_UMGANGSSPRACHLICH, DEFAULT_TEMP_FREUNDLICH, DEFAULT_TEMP_TECHNISCH, DEFAULT_TEMP_UMGANGSSPRACHLICH, 1, 1, 1)
     
     cOptApiUrl.Value := DEFAULT_API_URL
     cOptModel.Value  := DEFAULT_MODEL
@@ -527,6 +570,7 @@ ResetPromptsToDefault(*) {
     cOptTempUmgangssprachlich.Text := DEFAULT_TEMP_UMGANGSSPRACHLICH
     cOptMonitor.Choose(1)
     cOptRememberPosition.Value := 1
+    cOptFallbackSelectAll.Value := 1
     
     ShowToolTip("✅ Einstellungen auf Standard zurückgesetzt!")
 }
@@ -669,14 +713,22 @@ ReplaceShort(*) {
     QuickSwapWithGPT(PromptUmgangssprachlich, TempUmgangssprachlich)
 }
 
-    QuickSwapWithGPT(tone, temperature) {
-        clipSaved := ClipboardAll()
+QuickSwapWithGPT(tone, temperature) {
+    clipSaved := ClipboardAll()
     A_Clipboard := ""
     Send("^x")
     if !ClipWait(0.5) {
-        ; Fallback: Alles auswählen & ausschneiden
-        Send("^a^x")
-        if !ClipWait(0.8) {
+        if (FallbackSelectAll) {
+            ; Fallback: Alles auswählen & ausschneiden
+            Send("^a")
+            Sleep(50)
+            Send("^x")
+            if !ClipWait(0.8) {
+                ShowToolTip("⚠️ Keine Auswahl.")
+                A_Clipboard := clipSaved
+                return
+            }
+        } else {
             ShowToolTip("⚠️ Keine Auswahl.")
             A_Clipboard := clipSaved
             return

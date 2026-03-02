@@ -285,7 +285,7 @@ SetupQuickReplaceMenu() {
 }
 
 ; ========== HOTKEYS ==========
-^d:: {
+^!x:: {
     if (GuiIsOpen) {
         ShowToolTip("⚠️ GUI ist bereits geöffnet!")
         return
